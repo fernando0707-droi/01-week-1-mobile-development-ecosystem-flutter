@@ -1,17 +1,25 @@
-# flutter_application_3
+# Laporan Praktikum Modul 01: Mobile Ecosystem, Flutter Setup & Profile App
 
-A new Flutter project.
+- **Nama**: [Ayaska Fernando]
+- **NIM**: [362558302142]
+- **Kelas / Prodi**: 2c / Sarjana Terapan TRPL
+- **Mata Kuliah**: Pemrograman Perangkat Bergerak (Semester 3)
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 1. Ringkasan Aktivitas
+[Tuliskan 1-2 paragraf tentang apa yang Anda pelajari dan kerjakan pada minggu ini]
 
-A few resources to get you started if this is your first Flutter project:
+## 2. Bukti Tangkapan Layar (Running App)
+| Mode Portrait | Mode Landscape |
+|---|---|
+| ![Portrait](./screenshots/running_portrait.png) | ![Landscape](./screenshots/running_landscape.png) |
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## 3. Kendala yang Dihadapi & Solusinya
+- **Kendala**: [Contoh: Terjadi error cmdline-tools missing saat flutter doctor]
+- **Solusi**: [Contoh: Membuka Android SDK Manager dan menginstal paket Command-line Tools (latest)]
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 4. Jawaban Pertanyaan Refleksi
+1. **Pilihan Native vs Flutter**: [Jawaban Anda...]
+2. **Prinsip UI = f(state)**: [Jawaban Anda...]
+3. **Pentingnya Conventional Commits**: [Jawaban Anda...]
