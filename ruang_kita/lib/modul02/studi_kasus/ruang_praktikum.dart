@@ -11,6 +11,16 @@ class RuangPraktikumPage extends StatefulWidget {
 }
  
 class _RuangPraktikumPageState extends State<RuangPraktikumPage> {
+  // null = "Semua" (tidak ada filter aktif).
+  RoomStatus? _selectedStatus;
+ 
+  List<RoomSession> get _filteredSessions {
+    if (_selectedStatus == null) return dummyRoomSessions;
+    return dummyRoomSessions
+        .where((session) => session.status == _selectedStatus)
+        .toList();
+  }
+ 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -28,55 +38,92 @@ class _RuangPraktikumPageState extends State<RuangPraktikumPage> {
           ),
         ],
       ),
-      // Commit #3: LayoutBuilder membaca constraints.maxWidth dari PARENT
-      // (di sini body Scaffold), bukan lebar device lewat MediaQuery.
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.maxWidth;
- 
-          int crossAxisCount;
-          if (width < 600) {
-            crossAxisCount = 1; // Compact
-          } else if (width < 840) {
-            crossAxisCount = 2; // Medium
-          } else {
-            crossAxisCount = 3; // Expanded
-          }
- 
-          // Compact tetap pakai ListView (list vertikal murni).
-          if (crossAxisCount == 1) {
-            return ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: dummyRoomSessions.length,
-              itemBuilder: (context, index) {
-                return _RoomSessionCard(session: dummyRoomSessions[index]);
-              },
-            );
-          }
- 
-          // Medium & Expanded pakai GridView sesuai crossAxisCount.
-          return GridView.builder(
-            padding: const EdgeInsets.all(12),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.3,
+      body: Column(
+        children: [
+          // Commit #4: filter Wrap + ChoiceChip. Wrap dipakai (bukan Row)
+          // supaya chip otomatis lipat ke baris baru di layar sempit,
+          // tidak overflow horizontal.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Semua'),
+                  selected: _selectedStatus == null,
+                  // setState di sini langsung memicu build ulang list/grid
+                  // di bawah — tanpa restart aplikasi (poin F).
+                  onSelected: (_) {
+                    setState(() => _selectedStatus = null);
+                  },
+                ),
+                for (final status in RoomStatus.values)
+                  ChoiceChip(
+                    label: Text(status.label),
+                    selected: _selectedStatus == status,
+                    onSelected: (selected) {
+                      setState(() {
+                        _selectedStatus = selected ? status : null;
+                      });
+                    },
+                  ),
+              ],
             ),
-            itemCount: dummyRoomSessions.length,
-            itemBuilder: (context, index) {
-              return _RoomSessionCard(session: dummyRoomSessions[index]);
-            },
-          );
-        },
+          ),
+          // Expanded wajib di sini: Column tidak otomatis membatasi tinggi
+          // child-nya, jadi LayoutBuilder/ListView di dalamnya perlu diberi
+          // sisa ruang vertikal yang jelas, atau akan error "unbounded height".
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                final sessions = _filteredSessions;
+ 
+                int crossAxisCount;
+                if (width < 600) {
+                  crossAxisCount = 1; // Compact
+                } else if (width < 840) {
+                  crossAxisCount = 2; // Medium
+                } else {
+                  crossAxisCount = 3; // Expanded
+                }
+ 
+                if (crossAxisCount == 1) {
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: sessions.length,
+                    itemBuilder: (context, index) {
+                      return _RoomSessionCard(session: sessions[index]);
+                    },
+                  );
+                }
+ 
+                return GridView.builder(
+                  padding: const EdgeInsets.all(12),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 1.3,
+                  ),
+                  itemCount: sessions.length,
+                  itemBuilder: (context, index) {
+                    return _RoomSessionCard(session: sessions[index]);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 }
  
 // Card satu record ruang praktikum.
-// Stack membungkus Card + badge status sebagai overlay lewat Positioned,
-// bukan sekadar diletakkan berjejer dalam Row (poin D).
+// Stack + Positioned untuk badge overlay (commit #3), ditambah GestureDetector
+// untuk membuka detail lewat showModalBottomSheet (commit #4, poin G).
 class _RoomSessionCard extends StatelessWidget {
   final RoomSession session;
  
@@ -84,63 +131,134 @@ class _RoomSessionCard extends StatelessWidget {
  
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 56, 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        session.roomName,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
+    return GestureDetector(
+      onTap: () => _showDetailSheet(context, session),
+      child: Stack(
+        children: [
+          Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 56, 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          session.roomName,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        session.activityName,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                        const SizedBox(height: 4),
+                        Text(
+                          session.activityName,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        session.description,
-                        style: const TextStyle(fontSize: 13),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${session.startTime} - ${session.endTime}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          session.description,
+                          style: const TextStyle(fontSize: 13),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '${session.startTime} - ${session.endTime}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        Positioned(
-          top: 8,
-          right: 8,
-          child: _StatusBadge(status: session.status),
-        ),
-      ],
+          Positioned(
+            top: 8,
+            right: 8,
+            child: _StatusBadge(status: session.status),
+          ),
+        ],
+      ),
+    );
+  }
+ 
+  void _showDetailSheet(BuildContext context, RoomSession session) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        // StatefulBuilder dipakai karena builder bottom sheet ini bukan
+        // widget StatefulWidget sendiri — ini cara paling ringan untuk
+        // punya state lokal (kontrol UI) khusus di dalam sheet ini saja.
+        bool remindMe = false;
+ 
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                20,
+                20,
+                MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    session.roomName,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    session.activityName,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time, size: 16),
+                      const SizedBox(width: 6),
+                      Text('${session.startTime} - ${session.endTime}'),
+                      const SizedBox(width: 16),
+                      _StatusBadge(status: session.status),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(session.description),
+                  const SizedBox(height: 8),
+                  // Kontrol UI lokal minimal 1 buah (poin G) — SwitchListTile
+                  // ini murni state di dalam modal, tidak memengaruhi
+                  // halaman utama.
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Ingatkan saya sebelum mulai'),
+                    value: remindMe,
+                    onChanged: (value) {
+                      setModalState(() => remindMe = value);
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
