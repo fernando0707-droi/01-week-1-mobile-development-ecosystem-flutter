@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'studi_kasus/ruang_praktikum.dart';
+import 'modul02/studi_kasus/ruang_praktikum.dart';
 void main() {
   runApp(const RuangKitaApp());
 }
@@ -16,7 +16,7 @@ class RuangKitaApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
       ),
-      home: const ruangPraktikumPage(),
+      home: const RuangPraktikumPage(),
     );
   }
 }
